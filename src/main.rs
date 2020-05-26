@@ -1,9 +1,9 @@
 
-pub mod menv;
+pub mod solver;
 
 
 use std::io::stdin;
-use menv::cell::Cell;
+use solver::cell::Cell;
 
 #[allow(dead_code)]
 fn print_mat (v : &Vec<Vec<Cell>>) {
@@ -16,7 +16,7 @@ fn print_mat (v : &Vec<Vec<Cell>>) {
 }
 
 #[allow(dead_code)]
-fn step (env : menv::Env) {
+fn step (env : solver::Env) {
     let mut _s = String::new();
     let _ = stdin().read_line(&mut _s);
     env.print_hidden();
@@ -29,7 +29,7 @@ fn play_game() -> Result<(), OpenError>{
     let h = 13;
     let w = 15;
     let nb_mines = 40;
-    let mut env = menv::Env::new(h, w, nb_mines);
+    let mut env = solver::Env::new(h, w, nb_mines);
     let mut nb_turns = 0;
 
     while let Some (c) = env.pop() {
