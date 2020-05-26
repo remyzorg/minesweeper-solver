@@ -1,13 +1,11 @@
-
 pub mod solver;
 
-
-use std::io::stdin;
 use solver::cell::Cell;
+use std::io::stdin;
 
 #[allow(dead_code)]
-fn print_mat (v : &Vec<Vec<Cell>>) {
-    for row in v.iter()  {
+fn print_mat(v: &Vec<Vec<Cell>>) {
+    for row in v.iter() {
         for c in row.iter() {
             print!("{}", c.to_string());
         }
@@ -16,7 +14,7 @@ fn print_mat (v : &Vec<Vec<Cell>>) {
 }
 
 #[allow(dead_code)]
-fn step (env : solver::Env) {
+fn step(env: solver::Env) {
     let mut _s = String::new();
     let _ = stdin().read_line(&mut _s);
     env.print_hidden();
@@ -28,7 +26,7 @@ fn step (env : solver::Env) {
 struct OpenError(i32);
 
 // Runs a game.
-fn play_game() -> Result<(), OpenError>{
+fn play_game() -> Result<(), OpenError> {
     let h = 13;
     let w = 15;
     let nb_mines = 40;
@@ -39,7 +37,7 @@ fn play_game() -> Result<(), OpenError>{
 
     // Pops until there is nothing left to process, meaning the
     // game is over and won
-    while let Some (c) = env.pop() {
+    while let Some(c) = env.pop() {
         nb_turns = nb_turns + 1;
 
         // Opens current cell and possibly fails the game
@@ -49,7 +47,7 @@ fn play_game() -> Result<(), OpenError>{
         // Refill stack with a random cell if no more cells are accessible
         // by visiting neighbours
         if env.stack.is_empty() {
-            if let Some (c) = env.left.iter().next() {
+            if let Some(c) = env.left.iter().next() {
                 env.stack.push(*c);
             }
         }
@@ -57,7 +55,6 @@ fn play_game() -> Result<(), OpenError>{
 
     Ok(())
 }
-
 
 fn main() {
     let mut cnt = 0;
