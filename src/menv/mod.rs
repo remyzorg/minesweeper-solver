@@ -1,11 +1,11 @@
 
 use std::collections::HashSet;
 
-pub mod mcell;
+pub mod cell;
 
-use mcell::Score;
-use mcell::Cell;
-use mcell::Content;
+use cell::Score;
+use cell::Cell;
+use cell::Content;
 
 use rand::thread_rng;
 // use rand::Rng;
@@ -221,7 +221,7 @@ impl Env {
         Ok (())
     }
 
-    pub fn get(&self, c : (usize, usize)) -> &mcell::Cell {
+    pub fn get(&self, c : (usize, usize)) -> &cell::Cell {
         &(self.m)[c.0][c.1]
     }
 
