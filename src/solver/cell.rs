@@ -63,12 +63,12 @@ impl Cell {
             if sum == 1000 { Score::Mine } else {
                 let score = sum / nb;
 
-                if nb <= 1 && (sum != 1000 || sum != 0) { Score::NotEnough(score) }
+                if nb <= 1 && (sum != 1000 || sum != 0) {
+                    Score::NotEnough(score)
+                }
                 else { Score::Val(score) }
             };
     }
-
-
 
 }
 

@@ -8,7 +8,6 @@ use cell::Cell;
 use cell::Content;
 
 use rand::thread_rng;
-// use rand::Rng;
 use rand::seq::SliceRandom;
 
 
@@ -103,9 +102,7 @@ impl Env {
             |j| {env.left.insert((i, j));}
         ));
 
-        // let mut rng = rand::thread_rng();
         let init_c = (h - 1, w - 1);
-        // (rng.gen::<usize>() % h, rng.gen::<usize>() % w);
 
         env.stack.push(init_c);
         env.left.remove(&init_c);
@@ -140,7 +137,6 @@ impl Env {
                 }
             };
 
-        // println!("UPDATE_NBRS (c : {:?}) score:{} covered:{} marked:{} v:{}", c, score, nb_covered, nb_marked, v);
         for (i, j) in covered {
             self.m[i][j].insert(c, score);
             if !self.stacked.contains(&(i, j)) {

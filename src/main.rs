@@ -44,8 +44,6 @@ fn play_game() -> Result<(), OpenError>{
         }
     }
 
-    // println!("Solved: mines : {:?}\n", env.marked.iter().count());
-    // env.print_hidden();
     Ok(())
 }
 
