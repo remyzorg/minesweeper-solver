@@ -14,12 +14,19 @@ use rand::seq::SliceRandom;
 #[derive (Debug)]
 pub struct OpenError;
 
+// The solver environment
 pub struct Env {
+    // matrix to store cells infos
     pub m : Vec<Vec<Cell>>,
+    // opened cells
     pub opened : HashSet<(usize, usize)>,
+    // cells left to process (not opened, not marked)
     pub left : HashSet<(usize, usize)>,
+    // cells marked with a flag
     pub marked : HashSet<(usize, usize)>,
+    // current solver cell stack
     pub stack : Vec<(usize, usize)>,
+    // another way to access previous info
     pub stacked : HashSet<(usize, usize)>
 }
 
@@ -27,6 +34,7 @@ fn dim<T>(v : &Vec<Vec<T>>) -> (usize, usize) {
     (v.len(), v[0].len())
 }
 
+// Creates a set of cell neighbours
 pub fn neighbours
     (v : &Vec<Vec<Cell>>, (i, j) : (usize, usize))
      -> HashSet<(usize, usize)>
@@ -56,18 +64,25 @@ pub fn neighbours
     neighbours
 }
 
-
+// Generates an initial cell matrix to represent the gameboard
 fn gen (h : usize, w : usize, mine_nb : usize) -> Vec<Vec<Cell>> {
 
+    // Generates all mines by drawing from a shuffled
+    // vector of all cells
     let mines = {
         let mut v = Vec::new();
         (0..h).for_each(|i| (0..w).for_each(|j| {v.push((i, j));} ));
+
+        // remove the last corner to be sure this is not a mine
+        // so it can be used as the starting cell
         v.pop();
+
         v.shuffle(&mut thread_rng());
         v.truncate(mine_nb);
         v
     };
 
+    // Create the matrix
     let mut v : Vec<Vec<Cell>> =
         (0..h).map(
             |_| (0..w).map(
@@ -75,6 +90,7 @@ fn gen (h : usize, w : usize, mine_nb : usize) -> Vec<Vec<Cell>> {
             ).collect()
         ).collect();
 
+    // Inserts mines and cell values in the board
     mines.iter().for_each(|m| {
         v[m.0][m.1] = Cell::from(Content::Mine);
         neighbours(&v, *m).iter().for_each(
@@ -88,6 +104,8 @@ fn gen (h : usize, w : usize, mine_nb : usize) -> Vec<Vec<Cell>> {
 
 impl Env {
 
+    // Creates a new solver Env taking the dimensions of the board
+    // and the number of mines
     pub fn new (h : usize, w : usize, nb_mines : usize) -> Env {
         let mut env = Env {
             stack : Vec::new (),
@@ -109,7 +127,7 @@ impl Env {
         env
     }
 
-
+    // Refreshes scores given to neighbours cells by [c]
     fn update_neighbours_score (&mut self, c : (usize, usize)) {
         let nbrs = neighbours (&(self.m), c) ;
 
@@ -118,17 +136,27 @@ impl Env {
             .filter(|c|self.marked.contains(c))
             .count() as i32;
 
+        // remove marked neighbours from the current
+        // neighbours mine info
         let v = match self.get(c).content {
             Content::Empty(n) => n - nb_marked,
             _ => 0
         };
 
+        // The vector of unknown neighbours
         let covered : Vec<(usize, usize)> = nbrs.iter().filter(
             |c| !self.marked.contains(c) && !self.opened.contains(c)
         ).cloned().collect();
 
         let nb_covered = covered.len() as i32;
 
+        // The score givent to neighbours is
+        // - 1000 if there is the same amount of hidden neighbours than the
+        //   cell content info. It means every hidden neighbours is a mine
+        // - 0 if the current cell content info is 0. It means no neighbour
+        //   can be a mine
+        // - 100 / covered * info_value is the probability of a
+        //   neighbour to be a mine
         let score =
             if nb_covered <= v { 1000 } else {
                 if v == 0 { 0 }
@@ -137,6 +165,7 @@ impl Env {
                 }
             };
 
+        // push the neighbours on the stack if they are worth it
         for (i, j) in covered {
             self.m[i][j].insert(c, score);
             if !self.stacked.contains(&(i, j)) {
@@ -146,21 +175,23 @@ impl Env {
         }
     }
 
+    // Markes a cell
     pub fn mark (&mut self, c : (usize, usize)) {
 
         self.stacked.remove(&c);
         self.marked.insert(c);
         self.left.remove(&c);
 
-        let nbrs = neighbours(&self.m, c);
-
-        for nbr in nbrs {
-            if self.opened.contains(&nbr) {
-                self.update_neighbours_score(nbr);
+        // Refreshes all neighbours' neighbours scores after marking
+        neighbours(&self.m, c).iter().for_each(|nbr| {
+            if self.opened.contains(nbr) {
+                self.update_neighbours_score(*nbr);
             }
-        }
+        });
     }
 
+    // Sorts the stack to show lowest score in the end,
+    // mines at the beginning and cell with not much info in between
     pub fn sort(&mut self) {
         let m = &self.m;
         self.stack.sort_by(|a, b|{
@@ -171,6 +202,7 @@ impl Env {
         });
     }
 
+    // Pops the stack if possible
     pub fn pop (&mut self) -> Option<(usize, usize)> {
         self.stack.pop().map(|c| {
             self.stacked.remove(&c);
@@ -180,24 +212,32 @@ impl Env {
         )
     }
 
-    pub fn open (&mut self, c : (usize, usize)) -> Result<(), OpenError>
-    {
+    // Opens a cell. Game is lost if it's a Mine
+    pub fn open (&mut self, c : (usize, usize)) -> Result<(), OpenError> {
+        // fails if the given cell is a mine
         if let Content::Mine = self.get(c).content {
             return Err(OpenError)
         }
 
+        // local stack to recursively open 0 mines
         let mut stack0 : Vec<(usize, usize)> = Vec::new();
+
+        // neighbours that must refresh their neighbours score
+        // after the opening
         let mut seen0 : Vec<(usize, usize)> = Vec::new();
 
         stack0.push(c);
         self.opened.insert(c);
         seen0.push(c);
 
+        // Pops until the is no empty cell to open
         while let Some (Content::Empty(v))
             = stack0.pop().map(|c| self.get(c).content.clone())
         {
             for nbr in neighbours(&self.m, c) {
                 seen0.push(nbr);
+
+                // Recursively open neighbours if the mine info is 0
                 if v == 0 {
                     if let Content::Empty(nv) = self.get(nbr).content {
                         if !self.opened.contains(&nbr) {
@@ -209,32 +249,45 @@ impl Env {
             }
         }
 
-        for nbr in seen0 {
-            self.update_neighbours_score(nbr);
-        }
+        // Refresh all the impacted scores
+        seen0.iter().for_each(
+            |c| self.update_neighbours_score(*c)
+        );
 
+        // Sort the stack after refreshing
         self.sort();
+
         Ok (())
     }
 
+    // Immutable access to a cell in the matrix
     pub fn get(&self, c : (usize, usize)) -> &cell::Cell {
         &(self.m)[c.0][c.1]
     }
 
+    // Markes all obvious cells (the n first in the stack)
     pub fn mark_obvious (&mut self)  {
+
+        // Collects cells as long as they are obvious mines
         let drained : Vec<(usize, usize)> =
             self.stack.iter().take_while(
-            |c| match self.get(**c).score {
+                |c| match self.get(**c).score {
                 Score::Mine => true,
                 _ => false
             }
         ).copied().collect();
 
+        // Mark them
         drained.iter().for_each(|c| self.mark(*c));
+
+        // Remove them from stack in one row
         self.stack.drain(0..drained.len());
+
+        // Sort stack
         self.sort();
     }
 
+    // Showes the current state of the stack
     #[allow(dead_code)]
     pub fn print_stack (&self) {
         for c in &self.stack {
@@ -243,6 +296,7 @@ impl Env {
         println!("");
     }
 
+    // Print the current state of the discovered board
     #[allow(dead_code)]
     pub fn print_hidden (&self) {
         for (i, row) in self.m.iter().enumerate()  {
