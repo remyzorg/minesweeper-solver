@@ -2,4 +2,4 @@
 
 a minesweeper solver in Rust
 
-19% win rate on 10000 games
+50% win rate on 10000 games

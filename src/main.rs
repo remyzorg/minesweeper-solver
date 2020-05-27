@@ -1,6 +1,7 @@
 pub mod solver;
 
 use solver::cell::Cell;
+use solver::cell::Score;
 use std::io::stdin;
 
 #[allow(dead_code)]
@@ -14,11 +15,11 @@ fn print_mat(v: &Vec<Vec<Cell>>) {
 }
 
 #[allow(dead_code)]
-fn step(env: solver::Env) {
+fn step(env: &solver::Env) {
     let mut _s = String::new();
-    let _ = stdin().read_line(&mut _s);
     env.print_hidden();
     env.print_stack();
+    let _ = stdin().read_line(&mut _s);
 }
 
 // Error value for a lost game
@@ -27,8 +28,8 @@ struct OpenError(i32);
 
 // Runs a game.
 fn play_game() -> Result<(), OpenError> {
-    let h = 13;
-    let w = 15;
+    let h = 16;
+    let w = 16;
     let nb_mines = 40;
 
     // Inits the solver
@@ -42,7 +43,27 @@ fn play_game() -> Result<(), OpenError> {
 
         // Opens current cell and possibly fails the game
         env.open(c).map_err(|_| OpenError(nb_turns))?;
-        env.mark_obvious();
+
+        // Processes the obvious play : open or mark
+        // Stop if nothing obvious to pop or mark
+        loop {
+            if let Some(Score::Val(0)) =
+                env.stack.iter().last().map(|c| env.get(*c).score.clone())
+            {
+                let c = env.pop();
+                match c {
+                    Some(c) => env.open(c).map_err(|_| OpenError(nb_turns))?,
+                    None => (),
+                };
+                continue;
+            }
+
+            if env.mark_obvious() != 0 {
+                continue;
+            }
+
+            break;
+        }
 
         // Refill stack with a random cell if no more cells are accessible
         // by visiting neighbours
@@ -67,5 +88,5 @@ fn main() {
         }
         cnt = cnt + 1;
     }
-    println!("Win rate : {}%", win * 100 / qty);
+    println!("Win rate : {}% on {} games", win * 100 / qty, qty);
 }

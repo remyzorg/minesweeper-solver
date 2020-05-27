@@ -81,8 +81,10 @@ impl Cell {
         // there is a 0 or a 1000
         // 0 means the cell cannot be a mine
         // 1000 means the cell must be a mine
-        let sum = self.scores.iter_mut().fold(0, |acc, (_, s)| {
-            if *s == 1000 || acc == 1000 {
+        let sum = self.scores.iter_mut().fold(1, |acc, (_, s)| {
+            if *s == 0 || acc == 0 {
+                0
+            } else if *s == 1000 || acc == 1000 {
                 1000
             } else {
                 acc + *s
@@ -95,7 +97,7 @@ impl Cell {
         } else {
             let score = sum / nb;
 
-            if nb <= 1 && (sum != 1000 || sum != 0) {
+            if nb == 1 && sum != 1000 && sum != 0 {
                 Score::NotEnough(score)
             } else {
                 Score::Val(score)
